@@ -8,24 +8,30 @@ import (
 )
 
 type Goat struct {
-	URL        string
-	client     *http.Client
-	opts       Options
-	doc        *goquery.Document
-	req        *http.Request
-	selections []Selection
+	URL            string
+	client         *http.Client
+	opts           Options
+	doc            *goquery.Document
+	req            *http.Request
+	selectionQueue []selection
 }
 
 func NewGoat(url string, opts Options) (*Goat, error) {
 	goat := Goat{
-		URL:        url,
-		client:     new(http.Client),
-		opts:       opts,
-		selections: []Selection{},
+		URL:            url,
+		client:         new(http.Client),
+		opts:           opts,
+		selectionQueue: []selection{},
 	}
 
 	if err := goat.newRequest(); err != nil {
 		return nil, err
+	}
+
+	if goat.opts.EnableLogging {
+		goat.SetRequest(func(req *http.Request) {
+			log.Println(req.URL)
+		})
 	}
 
 	return &goat, nil
@@ -56,8 +62,11 @@ func (g *Goat) Scrape() {
 		log.Panicln(err)
 	}
 
-	for _, q := range g.selections {
+	for _, q := range g.selectionQueue {
 		g.doc.Find(q.selector).Each(func(i int, s *goquery.Selection) {
+			if g.opts.EnableLogging {
+				log.Printf("url: %s, selector: %s\n", g.req.URL, q.selector)
+			}
 			q.callback(s)
 		})
 	}
@@ -68,7 +77,7 @@ func (g *Goat) SetRequest(callback func(req *http.Request)) {
 }
 
 func (g *Goat) SetTags(selector string, callback func(s *goquery.Selection)) {
-	g.selections = append(g.selections, Selection{
+	g.selectionQueue = append(g.selectionQueue, selection{
 		selector: selector,
 		callback: callback,
 	})

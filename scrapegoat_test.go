@@ -55,7 +55,9 @@ func TestSetRequest(t *testing.T) {
 }
 
 func TestSetTags(t *testing.T) {
-	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery", DefaultOptions)
+	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery", Options{
+		EnableLogging: true,
+	})
 
 	data := []string{}
 
