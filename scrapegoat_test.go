@@ -7,7 +7,7 @@ import (
 )
 
 func TestScrape(t *testing.T) {
-	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery")
+	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery", DefaultOptions)
 
 	want := []string{
 		"Table of Contents",
@@ -40,7 +40,7 @@ func TestScrape(t *testing.T) {
 }
 
 func TestSetRequest(t *testing.T) {
-	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery")
+	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery", DefaultOptions)
 
 	goat.SetRequest(func(req *http.Request) {
 		req.Header.Add("test", "abc")

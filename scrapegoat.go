@@ -8,18 +8,18 @@ import (
 )
 
 type Goat struct {
-	URL               string
-	Client            *http.Client
-	MaxRecursionDepth int
-	EnableConcurrency bool
-	doc               *goquery.Document
-	req               *http.Request
+	URL    string
+	client *http.Client
+	opts   Options
+	doc    *goquery.Document
+	req    *http.Request
 }
 
-func NewGoat(url string) (*Goat, error) {
+func NewGoat(url string, opts Options) (*Goat, error) {
 	goat := Goat{
 		URL:    url,
-		Client: new(http.Client),
+		client: new(http.Client),
+		opts:   opts,
 	}
 
 	if err := goat.newRequest(); err != nil {
@@ -46,7 +46,7 @@ func (g *Goat) Scrape() []string {
 		}
 	}
 
-	res, err := g.Client.Do(g.req)
+	res, err := g.client.Do(g.req)
 	if err != nil {
 		log.Panicln(err)
 	}
