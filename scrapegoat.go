@@ -8,28 +8,32 @@ import (
 )
 
 type Goat struct {
-	URL           string
-	client        *http.Client
-	opts          Options
-	doc           *goquery.Document
-	req           *http.Request
-	selectorQueue []cssSelector
+	URL               string
+	MaxRecursionDepth int
+	EnableConcurrency bool
+	EnableLogging     bool
+	client            *http.Client
+	doc               *goquery.Document
+	req               *http.Request
+	selectorQueue     []cssSelector
 }
 
-func NewGoat(url string, opts Options) (*Goat, error) {
+func NewGoat(url string) (*Goat, error) {
 	goat := Goat{
-		URL:           url,
-		client:        new(http.Client),
-		opts:          opts,
-		req:           nil,
-		selectorQueue: []cssSelector{},
+		URL:               url,
+		MaxRecursionDepth: 3,
+		EnableConcurrency: false,
+		EnableLogging:     false,
+		client:            new(http.Client),
+		req:               nil,
+		selectorQueue:     []cssSelector{},
 	}
 
 	if err := goat.newRequest(); err != nil {
 		return nil, err
 	}
 
-	if goat.opts.EnableLogging {
+	if goat.EnableLogging {
 		goat.SetRequest(func(req *http.Request) {
 			log.Println(req.URL)
 		})
@@ -63,13 +67,13 @@ func (g *Goat) Scrape() {
 		log.Panicln(err)
 	}
 
-	for _, q := range g.selectorQueue {
-		g.doc.Find(q.selector).Each(func(i int, s *goquery.Selection) {
-			if g.opts.EnableLogging {
-				log.Printf("url: %s, selector: %s\n", g.req.URL, q.selector)
+	for _, s := range g.selectorQueue {
+		g.doc.Find(s.selector).Each(func(i int, gs *goquery.Selection) {
+			if g.EnableLogging {
+				log.Printf("url: %s, selector: %s\n", g.req.URL, s.selector)
 			}
 
-			q.callback(Selection{s})
+			s.callback(Selection{gs})
 		})
 	}
 }
