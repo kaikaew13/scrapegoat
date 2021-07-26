@@ -1,6 +1,7 @@
 package scrapegoat
 
 import (
+	"log"
 	"net/http"
 	"testing"
 )
@@ -19,41 +20,62 @@ func TestSetRequest(t *testing.T) {
 	}
 }
 
-func TestSetSelector(t *testing.T) {
-	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery")
-	goat.EnableLogging = true
+// func TestSetSelector(t *testing.T) {
+// 	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery")
+// 	goat.EnableLogging = true
 
-	data := []string{}
+// 	data := []string{}
 
-	goat.SetSelector(".markdown-body h2", func(s Selection) {
-		data = append(data, s.Text())
-	})
+// 	goat.SetSelector(".markdown-body h2", func(s Selection) {
+// 		data = append(data, s.Text())
+// 	})
 
-	goat.SetSelector(".markdown-body h1", func(s Selection) {
-		data = append(data, s.Text())
+// 	goat.SetSelector(".markdown-body h1", func(s Selection) {
+// 		data = append(data, s.Text())
+// 	})
+
+// 	goat.Scrape()
+
+// 	want := []string{
+// 		"Table of Contents",
+// 		"Installation",
+// 		"Changelog",
+// 		"API",
+// 		"Examples",
+// 		"Related Projects",
+// 		"Support",
+// 		"License",
+// 		"goquery - a little like that j-thing, only in Go",
+// 	}
+
+// 	if len(data) != len(want) {
+// 		t.Errorf("want slice of data with length of %d, got %d", len(want), len(data))
+// 	}
+
+// 	for i := range want {
+// 		if data[i] != want[i] {
+// 			t.Errorf("want data at index %d to be %s, got %s", i, want[i], data[i])
+// 		}
+// 	}
+// }
+
+func TestRecursive(t *testing.T) {
+	goat, _ := NewGoat("https://pkg.go.dev/github.com/PuerkitoBio/goquery")
+
+	goat.SetSelector(".go-Main-navDesktop .js-readmeOutline ul li", func(s Selection) {
+		log.Println(s.Text())
+		// s.Find("a").Each(func(i int, ss *goquery.Selection) {
+		// 	val, _ := ss.Attr("href")
+		// 	log.Println(val)
+		// })
+		s.Children()
+		s.SetSelector("a", func(ss Selection) {
+			val, _ := ss.Attr("href")
+			log.Println(val)
+		})
+
+		s.Scrape()
 	})
 
 	goat.Scrape()
-
-	want := []string{
-		"Table of Contents",
-		"Installation",
-		"Changelog",
-		"API",
-		"Examples",
-		"Related Projects",
-		"Support",
-		"License",
-		"goquery - a little like that j-thing, only in Go",
-	}
-
-	if len(data) != len(want) {
-		t.Errorf("want slice of data with length of %d, got %d", len(want), len(data))
-	}
-
-	for i := range want {
-		if data[i] != want[i] {
-			t.Errorf("want data at index %d to be %s, got %s", i, want[i], data[i])
-		}
-	}
 }
