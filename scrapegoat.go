@@ -8,18 +8,20 @@ import (
 )
 
 type Goat struct {
-	URL    string
-	client *http.Client
-	opts   Options
-	doc    *goquery.Document
-	req    *http.Request
+	URL        string
+	client     *http.Client
+	opts       Options
+	doc        *goquery.Document
+	req        *http.Request
+	selections []Selection
 }
 
 func NewGoat(url string, opts Options) (*Goat, error) {
 	goat := Goat{
-		URL:    url,
-		client: new(http.Client),
-		opts:   opts,
+		URL:        url,
+		client:     new(http.Client),
+		opts:       opts,
+		selections: []Selection{},
 	}
 
 	if err := goat.newRequest(); err != nil {
@@ -39,13 +41,7 @@ func (g *Goat) newRequest() error {
 	return nil
 }
 
-func (g *Goat) Scrape() []string {
-	if g.req == nil {
-		if err := g.newRequest(); err != nil {
-			log.Panicln(err)
-		}
-	}
-
+func (g *Goat) Scrape() {
 	res, err := g.client.Do(g.req)
 	if err != nil {
 		log.Panicln(err)
@@ -60,15 +56,20 @@ func (g *Goat) Scrape() []string {
 		log.Panicln(err)
 	}
 
-	data := []string{}
-
-	g.doc.Find(".markdown-body h2").Each(func(i int, s *goquery.Selection) {
-		data = append(data, s.Text())
-	})
-
-	return data
+	for _, q := range g.selections {
+		g.doc.Find(q.selector).Each(func(i int, s *goquery.Selection) {
+			q.callback(s)
+		})
+	}
 }
 
 func (g *Goat) SetRequest(callback func(req *http.Request)) {
 	callback(g.req)
+}
+
+func (g *Goat) SetTags(selector string, callback func(s *goquery.Selection)) {
+	g.selections = append(g.selections, Selection{
+		selector: selector,
+		callback: callback,
+	})
 }
