@@ -3,8 +3,6 @@ package scrapegoat
 import (
 	"net/http"
 	"testing"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 // func TestScrape(t *testing.T) {
@@ -54,18 +52,18 @@ func TestSetRequest(t *testing.T) {
 	}
 }
 
-func TestSetTags(t *testing.T) {
+func TestSetSelector(t *testing.T) {
 	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery", Options{
 		EnableLogging: true,
 	})
 
 	data := []string{}
 
-	goat.SetTags(".markdown-body h2", func(s *goquery.Selection) {
+	goat.SetSelector(".markdown-body h2", func(s Selection) {
 		data = append(data, s.Text())
 	})
 
-	goat.SetTags(".markdown-body h1", func(s *goquery.Selection) {
+	goat.SetSelector(".markdown-body h1", func(s Selection) {
 		data = append(data, s.Text())
 	})
 

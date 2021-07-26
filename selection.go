@@ -2,7 +2,11 @@ package scrapegoat
 
 import "github.com/PuerkitoBio/goquery"
 
-type selection struct {
+type cssSelector struct {
 	selector string
-	callback func(s *goquery.Selection)
+	callback func(s Selection)
+}
+
+type Selection struct {
+	*goquery.Selection
 }
