@@ -12,26 +12,41 @@ type Goat struct {
 	Client            *http.Client
 	MaxRecursionDepth int
 	EnableConcurrency bool
+	doc               *goquery.Document
+	req               *http.Request
 }
 
-func NewGoat(url string) *Goat {
+func NewGoat(url string) (*Goat, error) {
 	goat := Goat{
-		URL:               url,
-		Client:            new(http.Client),
-		MaxRecursionDepth: 0,
-		EnableConcurrency: false,
+		URL:    url,
+		Client: new(http.Client),
 	}
 
-	return &goat
+	if err := goat.newRequest(); err != nil {
+		return nil, err
+	}
+
+	return &goat, nil
+}
+
+func (g *Goat) newRequest() error {
+	req, err := http.NewRequest(http.MethodGet, g.URL, nil)
+	if err != nil {
+		return err
+	}
+
+	g.req = req
+	return nil
 }
 
 func (g *Goat) Scrape() []string {
-	req, err := http.NewRequest(http.MethodGet, g.URL, nil)
-	if err != nil {
-		log.Panicln(err)
+	if g.req == nil {
+		if err := g.newRequest(); err != nil {
+			log.Panicln(err)
+		}
 	}
 
-	res, err := g.Client.Do(req)
+	res, err := g.Client.Do(g.req)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -40,16 +55,20 @@ func (g *Goat) Scrape() []string {
 		log.Panicf("got a response with response code of %d, want %d", res.StatusCode, http.StatusOK)
 	}
 
-	doc, err := goquery.NewDocumentFromReader(res.Body)
+	g.doc, err = goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
 		log.Panicln(err)
 	}
 
 	data := []string{}
 
-	doc.Find(".markdown-body h2").Each(func(i int, s *goquery.Selection) {
+	g.doc.Find(".markdown-body h2").Each(func(i int, s *goquery.Selection) {
 		data = append(data, s.Text())
 	})
 
 	return data
+}
+
+func (g *Goat) SetRequest(callback func(req *http.Request)) {
+	callback(g.req)
 }
