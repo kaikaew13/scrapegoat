@@ -14,7 +14,18 @@ type Goat struct {
 	EnableLogging     bool
 	doc               *goquery.Document
 	req               *http.Request
-	selectorQueue     []cssSelector
+	selectorQueue     *[]cssSelector
+}
+
+type Scraper interface {
+	Scrape()
+}
+
+func setSelectorHelper(scraper Scraper, sq *[]cssSelector, selector string, callback func(s Selection)) {
+	*sq = append(*sq, cssSelector{
+		selector: selector,
+		callback: callback,
+	})
 }
 
 func NewGoat(url string) (*Goat, error) {
@@ -24,7 +35,7 @@ func NewGoat(url string) (*Goat, error) {
 		EnableConcurrency: false,
 		EnableLogging:     false,
 		req:               nil,
-		selectorQueue:     []cssSelector{},
+		selectorQueue:     new([]cssSelector),
 	}
 
 	if err := goat.newRequest(); err != nil {
@@ -66,15 +77,15 @@ func (g *Goat) Scrape() {
 		log.Panicln(err)
 	}
 
-	for _, s := range g.selectorQueue {
+	for _, s := range *g.selectorQueue {
 		g.doc.Find(s.selector).Each(func(i int, gs *goquery.Selection) {
 			if g.EnableLogging {
 				log.Printf("url: %s, selector: %s\n", g.req.URL, s.selector)
 			}
 
 			s.callback(Selection{
-				gs,
-				[]cssSelector{},
+				gs:            gs,
+				selectorQueue: new([]cssSelector),
 			})
 		})
 	}
@@ -85,8 +96,5 @@ func (g *Goat) SetRequest(callback func(req *http.Request)) {
 }
 
 func (g *Goat) SetSelector(selector string, callback func(s Selection)) {
-	g.selectorQueue = append(g.selectorQueue, cssSelector{
-		selector: selector,
-		callback: callback,
-	})
+	setSelectorHelper(g, g.selectorQueue, selector, callback)
 }
