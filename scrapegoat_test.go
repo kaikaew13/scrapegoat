@@ -1,6 +1,7 @@
 package scrapegoat
 
 import (
+	"log"
 	"net/http"
 	"testing"
 )
@@ -78,3 +79,22 @@ func TestSetSelector(t *testing.T) {
 
 // 	goat.Scrape()
 // }
+
+func TestNestedSetSelector(t *testing.T) {
+	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery")
+
+	data := []string{}
+
+	goat.SetSelector(".markdown-body p:nth-child(27) ", func(s Selection) {
+		data = append(data, s.Text())
+
+		s.SetSelector("a", func(ss Selection) {
+			val, _ := ss.Attr("href")
+			log.Println(val)
+		})
+
+		s.Scrape()
+	})
+
+	goat.Scrape()
+}
