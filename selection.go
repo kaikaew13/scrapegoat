@@ -1,7 +1,7 @@
 package scrapegoat
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -35,7 +35,7 @@ func newSelection(scraper Scraper, gs *goquery.Selection) *Selection {
 func (s *Selection) Scrape(url string) error {
 	if s.curRecursionDepth >= s.maxRecursionDepth {
 		if s.enableLogging {
-			log.Println("[maximum recursion depth reached]")
+			fmt.Println("[maximum recursion depth reached]")
 		}
 
 		return nil
@@ -59,17 +59,17 @@ func (s *Selection) Scrape(url string) error {
 					indent += "\t"
 				}
 
-				log.Printf("%surl: %s, selector: %s\n", indent, req.URL, cs.selector)
+				fmt.Printf("%surl: %s, selector: %s\n", indent, req.URL, cs.selector)
 			}
 
-			cs.callback(*newSelection(s, gs))
+			cs.selectorFunc(*newSelection(s, gs))
 		})
 	}
 
 	return nil
 }
 
-func (s *Selection) ChildrenSelector(selector string, callback func(s Selection)) {
+func (s *Selection) ChildrenSelector(selector string, selectorFunc func(s Selection)) {
 	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
 		if s.enableLogging {
 			var indent string
@@ -77,19 +77,19 @@ func (s *Selection) ChildrenSelector(selector string, callback func(s Selection)
 				indent += "\t"
 			}
 
-			log.Printf("%s- child selector: %s\n", indent, selector)
+			fmt.Printf("%s- child selector: %s\n", indent, selector)
 		}
 
-		callback(*newSelection(s, gs))
+		selectorFunc(*newSelection(s, gs))
 	})
 }
 
-func (s *Selection) SetRequest(callback func(req *http.Request)) {
-	*s.reqFuncs = append(*s.reqFuncs, callback)
+func (s *Selection) SetRequest(selectorFunc func(req *http.Request)) {
+	*s.reqFuncs = append(*s.reqFuncs, selectorFunc)
 }
 
-func (s *Selection) SetSelector(selector string, callback func(s Selection)) {
-	setSelectorHelper(s, selector, callback)
+func (s *Selection) SetSelector(selector string, selectorFunc func(s Selection)) {
+	setSelectorHelper(s, selector, selectorFunc)
 }
 
 func (s *Selection) getSelectorQueue() *[]cssSelector {

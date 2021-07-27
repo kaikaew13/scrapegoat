@@ -19,16 +19,16 @@ type Scraper interface {
 }
 
 type cssSelector struct {
-	selector string
-	callback func(s Selection)
+	selector     string
+	selectorFunc func(s Selection)
 }
 
-func setSelectorHelper(scraper Scraper, selector string, callback func(s Selection)) {
+func setSelectorHelper(scraper Scraper, selector string, selectorFunc func(s Selection)) {
 	sq := scraper.getSelectorQueue()
 
 	*sq = append(*sq, cssSelector{
-		selector: selector,
-		callback: callback,
+		selector:     selector,
+		selectorFunc: selectorFunc,
 	})
 }
 

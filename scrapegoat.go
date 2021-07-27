@@ -1,7 +1,7 @@
 package scrapegoat
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/PuerkitoBio/goquery"
@@ -31,7 +31,7 @@ func NewGoat() *Goat {
 func (g *Goat) Scrape(url string) error {
 	if g.curRecursionDepth >= g.MaxRecursionDepth {
 		if g.EnableLogging {
-			log.Println("[maximum recursion depth reached]")
+			fmt.Println("[maximum recursion depth reached]")
 		}
 
 		return nil
@@ -50,22 +50,22 @@ func (g *Goat) Scrape(url string) error {
 	for _, cs := range *g.selectorQueue {
 		doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
 			if g.EnableLogging {
-				log.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
+				fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
 			}
 
-			cs.callback(*newSelection(g, gs))
+			cs.selectorFunc(*newSelection(g, gs))
 		})
 	}
 
 	return nil
 }
 
-func (g *Goat) SetRequest(callback func(req *http.Request)) {
-	*g.reqFuncs = append(*g.reqFuncs, callback)
+func (g *Goat) SetRequest(selectorFunc func(req *http.Request)) {
+	*g.reqFuncs = append(*g.reqFuncs, selectorFunc)
 }
 
-func (g *Goat) SetSelector(selector string, callback func(s Selection)) {
-	setSelectorHelper(g, selector, callback)
+func (g *Goat) SetSelector(selector string, selectorFunc func(s Selection)) {
+	setSelectorHelper(g, selector, selectorFunc)
 }
 
 func (g *Goat) getSelectorQueue() *[]cssSelector {
