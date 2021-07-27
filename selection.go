@@ -12,8 +12,8 @@ type Selection struct {
 	gs                *goquery.Selection
 	selectorQueue     *[]cssSelector
 	reqFuncs          *[]func(req *http.Request)
-	maxRecursionDepth uint
-	curRecursionDepth uint
+	maxScrapingDepth  uint
+	curScrapingDepth  uint
 	enableConcurrency bool
 	enableLogging     bool
 }
@@ -25,17 +25,17 @@ func newSelection(scraper Scraper, gs *goquery.Selection) *Selection {
 		gs:                gs,
 		selectorQueue:     new([]cssSelector),
 		reqFuncs:          new([]func(req *http.Request)),
-		maxRecursionDepth: mrd,
-		curRecursionDepth: crd,
+		maxScrapingDepth:  mrd,
+		curScrapingDepth:  crd,
 		enableConcurrency: ec,
 		enableLogging:     el,
 	}
 }
 
 func (s *Selection) Scrape(url string) error {
-	if s.curRecursionDepth >= s.maxRecursionDepth {
+	if s.curScrapingDepth >= s.maxScrapingDepth {
 		if s.enableLogging {
-			fmt.Println("[maximum recursion depth reached]")
+			fmt.Println("[maximum scraping depth reached]")
 		}
 
 		return nil
@@ -55,7 +55,7 @@ func (s *Selection) Scrape(url string) error {
 		doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
 			if s.enableLogging {
 				var indent string
-				for i := 0; uint(i) < s.curRecursionDepth; i++ {
+				for i := 0; uint(i) < s.curScrapingDepth; i++ {
 					indent += "\t"
 				}
 
@@ -73,7 +73,7 @@ func (s *Selection) ChildrenSelector(selector string, selectorFunc func(s Select
 	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
 		if s.enableLogging {
 			var indent string
-			for i := 0; uint(i) < s.curRecursionDepth-1; i++ {
+			for i := 0; uint(i) < s.curScrapingDepth-1; i++ {
 				indent += "\t"
 			}
 

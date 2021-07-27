@@ -3,15 +3,16 @@ package scrapegoat
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
-const defaultMaxRecursionDepth uint = 3
+const defaultMaxScrapingDepth uint = 3
 
 type Goat struct {
-	MaxRecursionDepth uint
-	curRecursionDepth uint
+	MaxScrapingDepth  uint
+	curScrapingDepth  uint
 	EnableConcurrency bool
 	EnableLogging     bool
 	selectorQueue     *[]cssSelector
@@ -20,7 +21,7 @@ type Goat struct {
 
 func NewGoat() *Goat {
 	return &Goat{
-		MaxRecursionDepth: defaultMaxRecursionDepth,
+		MaxScrapingDepth:  defaultMaxScrapingDepth,
 		EnableConcurrency: false,
 		EnableLogging:     false,
 		selectorQueue:     new([]cssSelector),
@@ -29,9 +30,9 @@ func NewGoat() *Goat {
 }
 
 func (g *Goat) Scrape(url string) error {
-	if g.curRecursionDepth >= g.MaxRecursionDepth {
+	if g.curScrapingDepth >= g.MaxScrapingDepth {
 		if g.EnableLogging {
-			fmt.Println("[maximum recursion depth reached]")
+			fmt.Println("[maximum scraping depth reached]")
 		}
 
 		return nil
@@ -47,17 +48,53 @@ func (g *Goat) Scrape(url string) error {
 		return ErrNewDoc
 	}
 
-	for _, cs := range *g.selectorQueue {
-		doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
-			if g.EnableLogging {
-				fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
-			}
+	var wg sync.WaitGroup
 
-			cs.selectorFunc(*newSelection(g, gs))
-		})
+	for _, cs := range *g.selectorQueue {
+		if !g.EnableConcurrency {
+			g.scrapeSelector(doc, cs, req)
+		} else {
+			wg.Add(1)
+
+			go func(css cssSelector) {
+				defer wg.Done()
+				g.scrapeSelector(doc, css, req)
+			}(cs)
+		}
 	}
 
+	wg.Wait()
 	return nil
+}
+
+func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, req *http.Request) {
+	sel := doc.Find(cs.selector)
+	deltas := sel.Length()
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	wg.Add(deltas)
+
+	sel.Each(func(i int, gs *goquery.Selection) {
+		go func(gqs *goquery.Selection) {
+			defer wg.Done()
+
+			mu.Lock()
+			cs.selectorFunc(*newSelection(g, gqs))
+			mu.Unlock()
+		}(gs)
+	})
+
+	wg.Wait()
+
+	// doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
+	// 	if g.EnableLogging {
+	// 		fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
+	// 	}
+
+	// 	cs.selectorFunc(*newSelection(g, gs))
+	// })
 }
 
 func (g *Goat) SetRequest(selectorFunc func(req *http.Request)) {

@@ -2,6 +2,7 @@ package scrapegoat
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/PuerkitoBio/goquery"
@@ -56,15 +57,20 @@ func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
 	}
 	defer res.Body.Close()
 
+	if res.StatusCode != 200 {
+		fmt.Println(res.Status)
+		return nil, fmt.Errorf("got response with status: %s", res.Status)
+	}
+
 	return goquery.NewDocumentFromReader(res.Body)
 }
 
 func getOptions(scraper Scraper) (mrd, crd uint, ec, el bool) {
 	switch t := scraper.(type) {
 	case *Goat:
-		return t.MaxRecursionDepth, t.curRecursionDepth + 1, t.EnableConcurrency, t.EnableLogging
+		return t.MaxScrapingDepth, t.curScrapingDepth + 1, t.EnableConcurrency, t.EnableLogging
 	case *Selection:
-		return t.maxRecursionDepth, t.curRecursionDepth + 1, t.enableConcurrency, t.enableLogging
+		return t.maxScrapingDepth, t.curScrapingDepth + 1, t.enableConcurrency, t.enableLogging
 	}
 
 	return 0, 0, false, false
