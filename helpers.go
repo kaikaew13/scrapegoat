@@ -1,7 +1,15 @@
 package scrapegoat
 
 import (
+	"errors"
 	"net/http"
+
+	"github.com/PuerkitoBio/goquery"
+)
+
+var (
+	ErrNewRequest = errors.New("failed to get a request")
+	ErrNewDoc     = errors.New("failed to get a doc")
 )
 
 type Scraper interface {
@@ -33,4 +41,15 @@ func newRequest(scraper Scraper, url string) (*http.Request, error) {
 	}
 
 	return req, nil
+}
+
+func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
+	client := new(http.Client)
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	return goquery.NewDocumentFromReader(res.Body)
 }

@@ -1,62 +1,59 @@
 package scrapegoat
 
 import (
-	"log"
+	"net/http"
 	"testing"
 )
 
-// func TestSetRequest(t *testing.T) {
-// 	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery")
+func TestSetRequest(t *testing.T) {
+	goat := NewGoat()
 
-// 	goat.SetRequest(func(req *http.Request) {
-// 		req.Header.Add("test", "abc")
-// 	})
+	goat.SetRequest(func(req *http.Request) {
+		req.Header.Add("test", "abc")
+	})
 
-// 	want := "abc"
+	req, err := newRequest(goat, "https://github.com/PuerkitoBio/goquery")
+	if err != nil {
+		t.Error("erororor")
+	}
 
-// 	if goat.req.Header.Get("test") != want {
-// 		t.Errorf("want test header to have val of %s, got %s", want, goat.req.Header.Get("referer"))
-// 	}
-// }
+	want := "abc"
 
-// func TestSetSelector(t *testing.T) {
-// 	goat, _ := NewGoat("https://github.com/PuerkitoBio/goquery")
-// 	goat.EnableLogging = true
+	if req.Header.Get("test") != want {
+		t.Errorf("want test header to have val of %s, got %s", want, req.Header.Get("test"))
+	}
+}
 
-// 	data := []string{}
+func TestSetSelector(t *testing.T) {
+	goat := NewGoat()
+	goat.EnableLogging = true
 
-// 	goat.SetSelector(".markdown-body h2", func(s Selection) {
-// 		data = append(data, s.Text())
-// 	})
+	data := []string{}
 
-// 	goat.SetSelector(".markdown-body h1", func(s Selection) {
-// 		data = append(data, s.Text())
-// 	})
+	goat.SetSelector(".markdown-body h2", func(s Selection) {
+		data = append(data, s.Text())
+	})
 
-// 	goat.Scrape()
+	goat.SetSelector(".markdown-body h1", func(s Selection) {
+		data = append(data, s.Text())
+	})
 
-// 	want := []string{
-// 		"Table of Contents",
-// 		"Installation",
-// 		"Changelog",
-// 		"API",
-// 		"Examples",
-// 		"Related Projects",
-// 		"Support",
-// 		"License",
-// 		"goquery - a little like that j-thing, only in Go",
-// 	}
+	goat.Scrape("https://github.com/PuerkitoBio/goquery")
 
-// 	if len(data) != len(want) {
-// 		t.Errorf("want slice of data with length of %d, got %d", len(want), len(data))
-// 	}
+	want := []string{
+		"Table of Contents",
+		"Installation",
+		"Changelog",
+		"API",
+		"Examples",
+		"Related Projects",
+		"Support",
+		"License",
+		"goquery - a little like that j-thing, only in Go",
+	}
 
-// 	for i := range want {
-// 		if data[i] != want[i] {
-// 			t.Errorf("want data at index %d to be %s, got %s", i, want[i], data[i])
-// 		}
-// 	}
-// }
+	compareSliceHelper(t, want, data)
+}
 
 // func TestNested(t *testing.T) {
 // 	goat, _ := NewGoat("https://pkg.go.dev/github.com/PuerkitoBio/goquery")
@@ -80,7 +77,9 @@ import (
 // }
 
 func TestNestedSetSelector(t *testing.T) {
-	goat, _ := NewGoat()
+	goat := NewGoat()
+
+	data := []string{}
 
 	goat.SetSelector(".markdown-body p:nth-child(27) a ", func(s Selection) {
 
@@ -90,8 +89,9 @@ func TestNestedSetSelector(t *testing.T) {
 		// })
 
 		val, _ := s.Attr("href")
-		s.SetSelector("div.gh-header-meta", func(ss Selection) {
-			log.Println(ss.Text())
+		s.SetSelector(".markdown-body h2", func(ss Selection) {
+			// log.Println(ss.Text())
+			data = append(data, ss.Text())
 		})
 
 		s.Scrape(val)
@@ -99,4 +99,26 @@ func TestNestedSetSelector(t *testing.T) {
 	})
 
 	goat.Scrape("https://github.com/PuerkitoBio/goquery")
+
+	want := []string{
+		"Handle Non-UTF8 html Pages",
+		"Handle Javascript-based Pages",
+		"For Loop",
+	}
+
+	compareSliceHelper(t, want, data)
+}
+
+func compareSliceHelper(t testing.TB, want, got []string) {
+	t.Helper()
+
+	if len(got) != len(want) {
+		t.Errorf("want slice of data with length of %d, got %d", len(want), len(got))
+	}
+
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("want data at index %d to be %s, got %s", i, want[i], got[i])
+		}
+	}
 }

@@ -8,7 +8,6 @@ import (
 )
 
 type Goat struct {
-	// URL               string
 	MaxRecursionDepth int
 	EnableConcurrency bool
 	EnableLogging     bool
@@ -17,47 +16,25 @@ type Goat struct {
 	selectorQueue     *[]cssSelector
 }
 
-func NewGoat() (*Goat, error) {
-	goat := Goat{
-		// URL:               url,
+func NewGoat() *Goat {
+	return &Goat{
 		MaxRecursionDepth: 3,
 		EnableConcurrency: false,
 		EnableLogging:     false,
 		selectorQueue:     new([]cssSelector),
+		reqFuncs:          new([]func(req *http.Request)),
 	}
-
-	// if err := goat.newRequest(); err != nil {
-	// 	return nil, err
-	// }
-
-	if goat.EnableLogging {
-		goat.SetRequest(func(req *http.Request) {
-			log.Println(req.URL)
-		})
-	}
-
-	return &goat, nil
 }
 
 func (g *Goat) Scrape(url string) {
 	req, err := newRequest(g, url)
 	if err != nil {
-		log.Panicln(err)
+		log.Panicln(ErrNewRequest, err)
 	}
 
-	client := new(http.Client)
-	res, err := client.Do(req)
+	g.doc, err = getDocumentFromRequest(req)
 	if err != nil {
-		log.Panicln(err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		log.Panicf("got a response with response code of %d, want %d\n", res.StatusCode, http.StatusOK)
-	}
-
-	g.doc, err = goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		log.Panicln(err)
+		log.Panicln(ErrNewDoc, err)
 	}
 
 	for _, cs := range *g.selectorQueue {
@@ -66,10 +43,7 @@ func (g *Goat) Scrape(url string) {
 				log.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
 			}
 
-			cs.callback(Selection{
-				gs:            gs,
-				selectorQueue: new([]cssSelector),
-			})
+			cs.callback(*newSelection(gs))
 		})
 	}
 }
