@@ -1,7 +1,6 @@
 package scrapegoat
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
@@ -27,15 +26,15 @@ func newSelection(gs *goquery.Selection) *Selection {
 	}
 }
 
-func (s *Selection) Scrape(url string) {
+func (s *Selection) Scrape(url string) error {
 	req, err := newRequest(s, url)
 	if err != nil {
-		log.Panicln(ErrNewRequest, err)
+		return ErrNewReq
 	}
 
 	doc, err := getDocumentFromRequest(req)
 	if err != nil {
-		log.Panicln(ErrNewDoc, err)
+		return ErrNewDoc
 	}
 
 	for _, cs := range *s.selectorQueue {
@@ -44,21 +43,14 @@ func (s *Selection) Scrape(url string) {
 		})
 	}
 
-	// for _, each := range *s.selectorQueue {
-	// 	s.gs.ChildrenFiltered(each.selector).Each(func(i int, gs *goquery.Selection) {
-	// 		each.callback(Selection{
-	// 			gs:            gs,
-	// 			selectorQueue: new([]cssSelector),
-	// 		})
-	// 	})
-	// }
+	return nil
 }
 
-// func (s *Selection) SetChildrenSelector(selector string, callback func(s Selection)) {
-// 	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
-// 		callback(*newSelection(gs))
-// 	})
-// }
+func (s *Selection) SetChildrenSelector(selector string, callback func(s Selection)) {
+	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
+		callback(*newSelection(gs))
+	})
+}
 
 func (s *Selection) SetRequest(callback func(req *http.Request)) {
 	*s.reqFuncs = append(*s.reqFuncs, callback)

@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	ErrNewRequest = errors.New("failed to get a request")
-	ErrNewDoc     = errors.New("failed to get a doc")
+	ErrNewReq = errors.New("failed to get a request")
+	ErrNewDoc = errors.New("failed to get a doc")
 )
 
 type Scraper interface {
-	Scrape(url string)
+	Scrape(url string) error
 	getSelectorQueue() *[]cssSelector
 	getReqFuncs() *[]func(req *http.Request)
 }

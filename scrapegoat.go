@@ -11,9 +11,8 @@ type Goat struct {
 	MaxRecursionDepth int
 	EnableConcurrency bool
 	EnableLogging     bool
-	doc               *goquery.Document
-	reqFuncs          *[]func(req *http.Request)
 	selectorQueue     *[]cssSelector
+	reqFuncs          *[]func(req *http.Request)
 }
 
 func NewGoat() *Goat {
@@ -26,19 +25,19 @@ func NewGoat() *Goat {
 	}
 }
 
-func (g *Goat) Scrape(url string) {
+func (g *Goat) Scrape(url string) error {
 	req, err := newRequest(g, url)
 	if err != nil {
-		log.Panicln(ErrNewRequest, err)
+		return ErrNewReq
 	}
 
-	g.doc, err = getDocumentFromRequest(req)
+	doc, err := getDocumentFromRequest(req)
 	if err != nil {
-		log.Panicln(ErrNewDoc, err)
+		return ErrNewDoc
 	}
 
 	for _, cs := range *g.selectorQueue {
-		g.doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
+		doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
 			if g.EnableLogging {
 				log.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
 			}
@@ -46,6 +45,8 @@ func (g *Goat) Scrape(url string) {
 			cs.callback(*newSelection(gs))
 		})
 	}
+
+	return nil
 }
 
 func (g *Goat) SetRequest(callback func(req *http.Request)) {

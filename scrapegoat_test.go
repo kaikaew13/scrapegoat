@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+const testingURL string = "https://github.com/PuerkitoBio/goquery"
+
 func TestSetRequest(t *testing.T) {
 	goat := NewGoat()
 
@@ -12,7 +14,7 @@ func TestSetRequest(t *testing.T) {
 		req.Header.Add("test", "abc")
 	})
 
-	req, err := newRequest(goat, "https://github.com/PuerkitoBio/goquery")
+	req, err := newRequest(goat, testingURL)
 	if err != nil {
 		t.Error("erororor")
 	}
@@ -38,7 +40,9 @@ func TestSetSelector(t *testing.T) {
 		data = append(data, s.Text())
 	})
 
-	goat.Scrape("https://github.com/PuerkitoBio/goquery")
+	if err := goat.Scrape(testingURL); err != nil {
+		t.Error(err)
+	}
 
 	want := []string{
 		"Table of Contents",
@@ -55,50 +59,55 @@ func TestSetSelector(t *testing.T) {
 	compareSliceHelper(t, want, data)
 }
 
-// func TestNested(t *testing.T) {
-// 	goat, _ := NewGoat("https://pkg.go.dev/github.com/PuerkitoBio/goquery")
+func TestSetChildrenSelector(t *testing.T) {
+	goat := NewGoat()
 
-// 	goat.SetSelector(".go-Main-navDesktop .js-readmeOutline ul li", func(s Selection) {
-// 		log.Println(s.Text())
-// 		// s.Find("a").Each(func(i int, ss *goquery.Selection) {
-// 		// 	val, _ := ss.Attr("href")
-// 		// 	log.Println(val)
-// 		// })
+	data := []string{}
 
-// 		s.SetSelector("a", func(ss Selection) {
-// 			val, _ := ss.Attr("href")
-// 			log.Println(val)
-// 		})
+	goat.SetSelector(".markdown-body", func(s Selection) {
+		s.SetChildrenSelector("h2", func(ss Selection) {
+			data = append(data, ss.Text())
+		})
+	})
 
-// 		s.Scrape()
-// 	})
+	if err := goat.Scrape(testingURL); err != nil {
+		t.Error(err)
+	}
 
-// 	goat.Scrape()
-// }
+	want := []string{
+		"Table of Contents",
+		"Installation",
+		"Changelog",
+		"API",
+		"Examples",
+		"Related Projects",
+		"Support",
+		"License",
+	}
+
+	compareSliceHelper(t, want, data)
+}
 
 func TestNestedSetSelector(t *testing.T) {
 	goat := NewGoat()
 
 	data := []string{}
 
-	goat.SetSelector(".markdown-body p:nth-child(27) a ", func(s Selection) {
-
-		// s.SetSelector("a", func(ss Selection) {
-		// 	val, _ := ss.Attr("href")
-		// 	log.Println(val)
-		// })
-
+	goat.SetSelector(".markdown-body p:nth-child(27) a", func(s Selection) {
 		val, _ := s.Attr("href")
 		s.SetSelector(".markdown-body h2", func(ss Selection) {
-			// log.Println(ss.Text())
 			data = append(data, ss.Text())
 		})
 
-		s.Scrape(val)
+		if err := s.Scrape(val); err != nil {
+			t.Error(err)
+		}
 
 	})
 
-	goat.Scrape("https://github.com/PuerkitoBio/goquery")
+	if err := goat.Scrape(testingURL); err != nil {
+		t.Error(err)
+	}
 
 	want := []string{
 		"Handle Non-UTF8 html Pages",
