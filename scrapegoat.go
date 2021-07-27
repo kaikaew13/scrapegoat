@@ -51,15 +51,15 @@ func (g *Goat) Scrape(url string) error {
 	var wg sync.WaitGroup
 
 	for _, cs := range *g.selectorQueue {
-		if !g.EnableConcurrency {
-			g.scrapeSelector(doc, cs, req)
-		} else {
+		if g.EnableConcurrency {
 			wg.Add(1)
 
 			go func(css cssSelector) {
 				defer wg.Done()
 				g.scrapeSelector(doc, css, req)
 			}(cs)
+		} else {
+			g.scrapeSelector(doc, cs, req)
 		}
 	}
 
@@ -69,32 +69,39 @@ func (g *Goat) Scrape(url string) error {
 
 func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, req *http.Request) {
 	sel := doc.Find(cs.selector)
-	deltas := sel.Length()
 
-	var wg sync.WaitGroup
-	var mu sync.Mutex
+	if g.EnableConcurrency {
+		deltas := sel.Length()
 
-	wg.Add(deltas)
+		var wg sync.WaitGroup
+		var mu sync.Mutex
 
-	sel.Each(func(i int, gs *goquery.Selection) {
-		go func(gqs *goquery.Selection) {
-			defer wg.Done()
+		wg.Add(deltas)
 
-			mu.Lock()
-			cs.selectorFunc(*newSelection(g, gqs))
-			mu.Unlock()
-		}(gs)
-	})
+		sel.Each(func(i int, gs *goquery.Selection) {
+			go func(gqs *goquery.Selection) {
+				defer wg.Done()
 
-	wg.Wait()
+				if g.EnableLogging {
+					fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
+				}
 
-	// doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
-	// 	if g.EnableLogging {
-	// 		fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
-	// 	}
+				mu.Lock()
+				cs.selectorFunc(*newSelection(g, gqs))
+				mu.Unlock()
+			}(gs)
+		})
 
-	// 	cs.selectorFunc(*newSelection(g, gs))
-	// })
+		wg.Wait()
+	} else {
+		sel.Each(func(i int, gs *goquery.Selection) {
+			if g.EnableLogging {
+				fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
+			}
+
+			cs.selectorFunc(*newSelection(g, gs))
+		})
+	}
 }
 
 func (g *Goat) SetRequest(selectorFunc func(req *http.Request)) {
