@@ -50,7 +50,7 @@ func newRequest(scraper Scraper, url string) (*http.Request, error) {
 		return nil, err
 	}
 
-	req.Header.Add("User-Agent", randomUserAgent())
+	req.Header.Add("User-Agent", getRandomUserAgent())
 
 	reqFuncs := scraper.getReqFuncs()
 	if reqFuncs != nil {
@@ -89,7 +89,7 @@ func getOptions(scraper Scraper) (mrd, crd uint, ec, el bool) {
 	return 0, 0, false, false
 }
 
-func randomUserAgent() string {
+func getRandomUserAgent() string {
 	rand.Seed(time.Now().Unix())
 	return userAgents[rand.Int()%len(userAgents)]
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -51,33 +52,66 @@ func (s *Selection) Scrape(url string) error {
 		return ErrNewDoc
 	}
 
+	var wg sync.WaitGroup
+
 	for _, cs := range *s.selectorQueue {
-		doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
-			if s.enableLogging {
-				var indent string
-				for i := 0; uint(i) < s.curScrapingDepth; i++ {
-					indent += "\t"
+		if s.enableConcurrency {
+			wg.Add(1)
+
+			go func(css cssSelector) {
+				defer wg.Done()
+				s.scrapeSelector(doc, css, req.URL.String())
+			}(cs)
+		} else {
+			s.scrapeSelector(doc, cs, req.URL.String())
+		}
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func (s *Selection) scrapeSelector(doc *goquery.Document, cs cssSelector, url string) {
+	sel := doc.Find(cs.selector)
+
+	if s.enableConcurrency {
+		deltas := sel.Length()
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+
+		wg.Add(deltas)
+
+		sel.Each(func(i int, gs *goquery.Selection) {
+			go func(gqs *goquery.Selection) {
+				defer wg.Done()
+
+				if s.enableLogging {
+					s.log(url, cs.selector, int(s.curScrapingDepth))
 				}
 
-				fmt.Printf("%surl: %s, selector: %s\n", indent, req.URL, cs.selector)
+				mu.Lock()
+				cs.selectorFunc(*newSelection(s, gqs))
+				mu.Unlock()
+			}(gs)
+		})
+
+		wg.Wait()
+	} else {
+		sel.Each(func(i int, gs *goquery.Selection) {
+			if s.enableLogging {
+				s.log(url, cs.selector, int(s.curScrapingDepth))
 			}
 
 			cs.selectorFunc(*newSelection(s, gs))
 		})
 	}
-
-	return nil
 }
 
 func (s *Selection) ChildrenSelector(selector string, selectorFunc func(s Selection)) {
 	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
 		if s.enableLogging {
-			var indent string
-			for i := 0; uint(i) < s.curScrapingDepth-1; i++ {
-				indent += "\t"
-			}
-
-			fmt.Printf("%s- child selector: %s\n", indent, selector)
+			s.log("", selector, int(s.curScrapingDepth)-1)
 		}
 
 		selectorFunc(*newSelection(s, gs))
@@ -106,4 +140,18 @@ func (s *Selection) Text() string {
 
 func (s *Selection) Attr(attr string) (val string, exist bool) {
 	return s.gs.Attr(attr)
+}
+
+func (s *Selection) log(url, selector string, indent int) {
+	var ind string
+	for i := 0; i < indent; i++ {
+		ind += "\t"
+	}
+
+	if url == "" {
+		fmt.Printf("%s- child selector: %s\n", ind, selector)
+		return
+	}
+
+	fmt.Printf("%surl: %s, selector: %s\n", ind, url, selector)
 }

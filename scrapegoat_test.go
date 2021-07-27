@@ -16,7 +16,7 @@ func TestSetRequest(t *testing.T) {
 
 	req, err := newRequest(goat, testingURL)
 	if err != nil {
-		t.Error("erororor")
+		t.Fatal(err)
 	}
 
 	want := "abc"
@@ -41,7 +41,7 @@ func TestSetSelector(t *testing.T) {
 	})
 
 	if err := goat.Scrape(testingURL); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	want := []string{
@@ -72,7 +72,7 @@ func TestSetChildrenSelector(t *testing.T) {
 	})
 
 	if err := goat.Scrape(testingURL); err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	want := []string{
@@ -126,16 +126,17 @@ func TestNestedSetSelector(t *testing.T) {
 				})
 
 				if err := s.Scrape(val); err != nil {
-					t.Error(err)
+					t.Fatal(err)
 				}
 
 			})
 
 			if err := goat.Scrape(testingURL); err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
 
 			compareSliceHelper(t, tt.want, data)
+
 		})
 	}
 }
@@ -156,7 +157,9 @@ func TestEnableConcurrency(t *testing.T) {
 			data[s.Text()] = true
 		})
 
-		goat.Scrape(testingURL)
+		if err := goat.Scrape(testingURL); err != nil {
+			t.Fatal(err)
+		}
 
 		want := []string{
 			"Table of Contents",

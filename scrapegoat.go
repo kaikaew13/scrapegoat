@@ -56,10 +56,10 @@ func (g *Goat) Scrape(url string) error {
 
 			go func(css cssSelector) {
 				defer wg.Done()
-				g.scrapeSelector(doc, css, req)
+				g.scrapeSelector(doc, css, req.URL.String())
 			}(cs)
 		} else {
-			g.scrapeSelector(doc, cs, req)
+			g.scrapeSelector(doc, cs, req.URL.String())
 		}
 	}
 
@@ -67,7 +67,7 @@ func (g *Goat) Scrape(url string) error {
 	return nil
 }
 
-func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, req *http.Request) {
+func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, url string) {
 	sel := doc.Find(cs.selector)
 
 	if g.EnableConcurrency {
@@ -83,7 +83,7 @@ func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, req *http.R
 				defer wg.Done()
 
 				if g.EnableLogging {
-					fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
+					g.log(url, cs.selector)
 				}
 
 				mu.Lock()
@@ -96,7 +96,7 @@ func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, req *http.R
 	} else {
 		sel.Each(func(i int, gs *goquery.Selection) {
 			if g.EnableLogging {
-				fmt.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
+				g.log(url, cs.selector)
 			}
 
 			cs.selectorFunc(*newSelection(g, gs))
@@ -118,4 +118,8 @@ func (g *Goat) getSelectorQueue() *[]cssSelector {
 
 func (g *Goat) getReqFuncs() *[]func(req *http.Request) {
 	return g.reqFuncs
+}
+
+func (g *Goat) log(url, selector string) {
+	fmt.Printf("url: %s, selector: %s\n", url, selector)
 }
