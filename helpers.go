@@ -9,13 +9,18 @@ import (
 
 var (
 	ErrNewReq = errors.New("failed to get a request")
-	ErrNewDoc = errors.New("failed to get a doc")
+	ErrNewDoc = errors.New("failed to get a document")
 )
 
 type Scraper interface {
 	Scrape(url string) error
 	getSelectorQueue() *[]cssSelector
 	getReqFuncs() *[]func(req *http.Request)
+}
+
+type cssSelector struct {
+	selector string
+	callback func(s Selection)
 }
 
 func setSelectorHelper(scraper Scraper, selector string, callback func(s Selection)) {
@@ -52,4 +57,15 @@ func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
 	defer res.Body.Close()
 
 	return goquery.NewDocumentFromReader(res.Body)
+}
+
+func getOptions(scraper Scraper) (mrd, crd int, ec, el bool) {
+	switch t := scraper.(type) {
+	case *Goat:
+		return t.MaxRecursionDepth, t.curRecursionDepth + 1, t.EnableConcurrency, t.EnableLogging
+	case *Selection:
+		return t.maxRecursionDepth, t.curRecursionDepth + 1, t.enableConcurrency, t.enableLogging
+	}
+
+	return 0, 0, false, false
 }

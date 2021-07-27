@@ -1,28 +1,34 @@
 package scrapegoat
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
-type cssSelector struct {
-	selector string
-	callback func(s Selection)
-}
-
 type Selection struct {
-	gs            *goquery.Selection
-	selectorQueue *[]cssSelector
-	reqFuncs      *[]func(req *http.Request)
+	gs                *goquery.Selection
+	selectorQueue     *[]cssSelector
+	reqFuncs          *[]func(req *http.Request)
+	maxRecursionDepth int
+	curRecursionDepth int
+	enableConcurrency bool
+	enableLogging     bool
 }
 
-func newSelection(gs *goquery.Selection) *Selection {
+func newSelection(scraper Scraper, gs *goquery.Selection) *Selection {
+	mrd, crd, ec, el := getOptions(scraper)
+
 	return &Selection{
-		gs:            gs,
-		selectorQueue: new([]cssSelector),
-		reqFuncs:      new([]func(req *http.Request)),
+		gs:                gs,
+		selectorQueue:     new([]cssSelector),
+		reqFuncs:          new([]func(req *http.Request)),
+		maxRecursionDepth: mrd,
+		curRecursionDepth: crd,
+		enableConcurrency: ec,
+		enableLogging:     el,
 	}
 }
 
@@ -39,16 +45,29 @@ func (s *Selection) Scrape(url string) error {
 
 	for _, cs := range *s.selectorQueue {
 		doc.Find(cs.selector).Each(func(i int, gs *goquery.Selection) {
-			cs.callback(*newSelection(gs))
+			if s.enableLogging {
+				var indent string
+				for i := 0; i < s.curRecursionDepth; i++ {
+					indent += "\t"
+				}
+
+				log.Printf("%surl: %s, selector: %s\n", indent, req.URL, cs.selector)
+			}
+
+			cs.callback(*newSelection(s, gs))
 		})
 	}
 
 	return nil
 }
 
-func (s *Selection) SetChildrenSelector(selector string, callback func(s Selection)) {
+func (s *Selection) SetChildrenSelector(selector string, callback func(sel Selection)) {
 	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
-		callback(*newSelection(gs))
+		if s.enableLogging {
+			log.Printf("- child selector: %s\n", selector)
+		}
+
+		callback(*newSelection(s, gs))
 	})
 }
 

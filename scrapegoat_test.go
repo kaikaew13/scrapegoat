@@ -61,6 +61,7 @@ func TestSetSelector(t *testing.T) {
 
 func TestSetChildrenSelector(t *testing.T) {
 	goat := NewGoat()
+	goat.EnableLogging = true
 
 	data := []string{}
 
@@ -90,6 +91,7 @@ func TestSetChildrenSelector(t *testing.T) {
 
 func TestNestedSetSelector(t *testing.T) {
 	goat := NewGoat()
+	goat.EnableLogging = true
 
 	data := []string{}
 

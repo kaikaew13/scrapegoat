@@ -9,6 +9,7 @@ import (
 
 type Goat struct {
 	MaxRecursionDepth int
+	curRecursionDepth int
 	EnableConcurrency bool
 	EnableLogging     bool
 	selectorQueue     *[]cssSelector
@@ -18,6 +19,7 @@ type Goat struct {
 func NewGoat() *Goat {
 	return &Goat{
 		MaxRecursionDepth: 3,
+		curRecursionDepth: 0,
 		EnableConcurrency: false,
 		EnableLogging:     false,
 		selectorQueue:     new([]cssSelector),
@@ -42,7 +44,7 @@ func (g *Goat) Scrape(url string) error {
 				log.Printf("url: %s, selector: %s\n", req.URL, cs.selector)
 			}
 
-			cs.callback(*newSelection(gs))
+			cs.callback(*newSelection(g, gs))
 		})
 	}
 
