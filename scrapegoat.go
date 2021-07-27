@@ -7,9 +7,11 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+const defaultMaxRecursionDepth uint = 3
+
 type Goat struct {
-	MaxRecursionDepth int
-	curRecursionDepth int
+	MaxRecursionDepth uint
+	curRecursionDepth uint
 	EnableConcurrency bool
 	EnableLogging     bool
 	selectorQueue     *[]cssSelector
@@ -18,8 +20,7 @@ type Goat struct {
 
 func NewGoat() *Goat {
 	return &Goat{
-		MaxRecursionDepth: 3,
-		curRecursionDepth: 0,
+		MaxRecursionDepth: defaultMaxRecursionDepth,
 		EnableConcurrency: false,
 		EnableLogging:     false,
 		selectorQueue:     new([]cssSelector),
@@ -28,6 +29,14 @@ func NewGoat() *Goat {
 }
 
 func (g *Goat) Scrape(url string) error {
+	if g.curRecursionDepth >= g.MaxRecursionDepth {
+		if g.EnableLogging {
+			log.Println("[maximum recursion depth reached]")
+		}
+
+		return nil
+	}
+
 	req, err := newRequest(g, url)
 	if err != nil {
 		return ErrNewReq

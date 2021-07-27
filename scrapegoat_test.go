@@ -66,7 +66,7 @@ func TestSetChildrenSelector(t *testing.T) {
 	data := []string{}
 
 	goat.SetSelector(".markdown-body", func(s Selection) {
-		s.SetChildrenSelector("h2", func(ss Selection) {
+		s.ChildrenSelector("h2", func(ss Selection) {
 			data = append(data, ss.Text())
 		})
 	})
@@ -90,34 +90,54 @@ func TestSetChildrenSelector(t *testing.T) {
 }
 
 func TestNestedSetSelector(t *testing.T) {
-	goat := NewGoat()
-	goat.EnableLogging = true
+	tests := []struct {
+		desc string
+		mrd  uint
+		want []string
+	}{
+		{
+			desc: "set MaxRecursionDepth to 2 - should be able to fetch data",
+			mrd:  2,
+			want: []string{
+				"Handle Non-UTF8 html Pages",
+				"Handle Javascript-based Pages",
+				"For Loop",
+			},
+		},
+		{
+			desc: "set MaxRecursionDepth to 1 - should not be able to fetch data",
+			mrd:  1,
+			want: []string{},
+		},
+	}
 
-	data := []string{}
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			goat := NewGoat()
+			goat.EnableLogging = true
+			goat.MaxRecursionDepth = tt.mrd
 
-	goat.SetSelector(".markdown-body p:nth-child(27) a", func(s Selection) {
-		val, _ := s.Attr("href")
-		s.SetSelector(".markdown-body h2", func(ss Selection) {
-			data = append(data, ss.Text())
+			data := []string{}
+
+			goat.SetSelector(".markdown-body p:nth-child(27) a", func(s Selection) {
+				val, _ := s.Attr("href")
+				s.SetSelector(".markdown-body h2", func(ss Selection) {
+					data = append(data, ss.Text())
+				})
+
+				if err := s.Scrape(val); err != nil {
+					t.Error(err)
+				}
+
+			})
+
+			if err := goat.Scrape(testingURL); err != nil {
+				t.Error(err)
+			}
+
+			compareSliceHelper(t, tt.want, data)
 		})
-
-		if err := s.Scrape(val); err != nil {
-			t.Error(err)
-		}
-
-	})
-
-	if err := goat.Scrape(testingURL); err != nil {
-		t.Error(err)
 	}
-
-	want := []string{
-		"Handle Non-UTF8 html Pages",
-		"Handle Javascript-based Pages",
-		"For Loop",
-	}
-
-	compareSliceHelper(t, want, data)
 }
 
 func compareSliceHelper(t testing.TB, want, got []string) {

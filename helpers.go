@@ -59,7 +59,7 @@ func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
 	return goquery.NewDocumentFromReader(res.Body)
 }
 
-func getOptions(scraper Scraper) (mrd, crd int, ec, el bool) {
+func getOptions(scraper Scraper) (mrd, crd uint, ec, el bool) {
 	switch t := scraper.(type) {
 	case *Goat:
 		return t.MaxRecursionDepth, t.curRecursionDepth + 1, t.EnableConcurrency, t.EnableLogging
