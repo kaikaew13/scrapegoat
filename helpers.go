@@ -78,17 +78,6 @@ func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
 	return goquery.NewDocumentFromReader(res.Body)
 }
 
-func getOptions(scraper Scraper) (mrd, crd uint, ec, el bool) {
-	switch t := scraper.(type) {
-	case *Goat:
-		return t.MaxScrapingDepth, t.curScrapingDepth + 1, t.EnableConcurrency, t.EnableLogging
-	case *Selection:
-		return t.maxScrapingDepth, t.curScrapingDepth + 1, t.enableConcurrency, t.enableLogging
-	}
-
-	return 0, 0, false, false
-}
-
 func getRandomUserAgent() string {
 	rand.Seed(time.Now().Unix())
 	return userAgents[rand.Int()%len(userAgents)]

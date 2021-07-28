@@ -27,8 +27,10 @@ func TestSetRequest(t *testing.T) {
 }
 
 func TestSetSelector(t *testing.T) {
-	goat := NewGoat()
-	goat.EnableLogging = true
+	goat := NewGoat(
+		EnableLogging(true),
+	)
+	// goat.EnableLogging = true
 
 	data := []string{}
 
@@ -60,8 +62,10 @@ func TestSetSelector(t *testing.T) {
 }
 
 func TestSetChildrenSelector(t *testing.T) {
-	goat := NewGoat()
-	goat.EnableLogging = true
+	goat := NewGoat(
+		EnableLogging(true),
+	)
+	// goat.EnableLogging = true
 
 	data := []string{}
 
@@ -92,12 +96,12 @@ func TestSetChildrenSelector(t *testing.T) {
 func TestNestedSetSelector(t *testing.T) {
 	tests := []struct {
 		desc string
-		mrd  uint
+		msd  uint
 		want []string
 	}{
 		{
 			desc: "set MaxRecursionDepth to 2 - should be able to fetch data",
-			mrd:  2,
+			msd:  2,
 			want: []string{
 				"Handle Non-UTF8 html Pages",
 				"Handle Javascript-based Pages",
@@ -106,16 +110,19 @@ func TestNestedSetSelector(t *testing.T) {
 		},
 		{
 			desc: "set MaxRecursionDepth to 1 - should not be able to fetch data",
-			mrd:  1,
+			msd:  1,
 			want: []string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			goat := NewGoat()
-			goat.EnableLogging = true
-			goat.MaxScrapingDepth = tt.mrd
+			goat := NewGoat(
+				EnableLogging(true),
+				MaxScrapingDepth(tt.msd),
+			)
+			// goat.EnableLogging = true
+			// goat.MaxScrapingDepth = tt.mrd
 
 			data := []string{}
 
@@ -143,9 +150,10 @@ func TestNestedSetSelector(t *testing.T) {
 
 func TestEnableConcurrency(t *testing.T) {
 	for i := 0; i < 10; i++ {
-		goat := NewGoat()
-		goat.EnableConcurrency = true
-		goat.EnableLogging = true
+		goat := NewGoat(
+			EnableConcurrency(true),
+			EnableLogging(true),
+		)
 
 		data := map[string]bool{}
 

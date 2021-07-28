@@ -8,30 +8,30 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-const defaultMaxScrapingDepth uint = 3
-
 type Goat struct {
-	MaxScrapingDepth  uint
-	curScrapingDepth  uint
-	EnableConcurrency bool
-	EnableLogging     bool
-	selectorQueue     *[]cssSelector
-	reqFuncs          *[]func(req *http.Request)
+	curScrapingDepth uint
+	opts             options
+	selectorQueue    *[]cssSelector
+	reqFuncs         *[]func(req *http.Request)
 }
 
-func NewGoat() *Goat {
-	return &Goat{
-		MaxScrapingDepth:  defaultMaxScrapingDepth,
-		EnableConcurrency: false,
-		EnableLogging:     false,
-		selectorQueue:     new([]cssSelector),
-		reqFuncs:          new([]func(req *http.Request)),
+func NewGoat(opts ...optionFunc) *Goat {
+	goat := &Goat{
+		selectorQueue: new([]cssSelector),
+		reqFuncs:      new([]func(req *http.Request)),
+		opts:          defaultOptions,
 	}
+
+	for _, opt := range opts {
+		opt(&goat.opts)
+	}
+
+	return goat
 }
 
 func (g *Goat) Scrape(url string) error {
-	if g.curScrapingDepth >= g.MaxScrapingDepth {
-		if g.EnableLogging {
+	if g.curScrapingDepth >= g.opts.maxScrapingDepth {
+		if g.opts.enableLogging {
 			fmt.Println("[maximum scraping depth reached]")
 		}
 
@@ -51,7 +51,7 @@ func (g *Goat) Scrape(url string) error {
 	var wg sync.WaitGroup
 
 	for _, cs := range *g.selectorQueue {
-		if g.EnableConcurrency {
+		if g.opts.enableConcurrency {
 			wg.Add(1)
 
 			go func(css cssSelector) {
@@ -70,7 +70,7 @@ func (g *Goat) Scrape(url string) error {
 func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, url string) {
 	sel := doc.Find(cs.selector)
 
-	if g.EnableConcurrency {
+	if g.opts.enableConcurrency {
 		deltas := sel.Length()
 
 		var wg sync.WaitGroup
@@ -82,12 +82,12 @@ func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, url string)
 			go func(gqs *goquery.Selection) {
 				defer wg.Done()
 
-				if g.EnableLogging {
+				if g.opts.enableLogging {
 					g.log(url, cs.selector)
 				}
 
 				mu.Lock()
-				cs.selectorFunc(*newSelection(g, gqs))
+				cs.selectorFunc(*newSelection(&g.opts, g.curScrapingDepth+1, gqs))
 				mu.Unlock()
 			}(gs)
 		})
@@ -95,11 +95,11 @@ func (g *Goat) scrapeSelector(doc *goquery.Document, cs cssSelector, url string)
 		wg.Wait()
 	} else {
 		sel.Each(func(i int, gs *goquery.Selection) {
-			if g.EnableLogging {
+			if g.opts.enableLogging {
 				g.log(url, cs.selector)
 			}
 
-			cs.selectorFunc(*newSelection(g, gs))
+			cs.selectorFunc(*newSelection(&g.opts, g.curScrapingDepth+1, gs))
 		})
 	}
 }
