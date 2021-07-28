@@ -10,25 +10,23 @@ import (
 )
 
 type Selection struct {
-	gs               *goquery.Selection
-	curScrapingDepth uint
-	opts             options
-	selectorQueue    *[]cssSelector
-	reqFuncs         *[]func(req *http.Request)
+	gs            *goquery.Selection
+	opts          options
+	selectorQueue *[]cssSelector
+	reqFuncs      *[]func(req *http.Request)
 }
 
-func newSelection(opts *options, depth uint, gs *goquery.Selection) *Selection {
+func newSelection(opts *options, gs *goquery.Selection) *Selection {
 	return &Selection{
-		gs:               gs,
-		curScrapingDepth: depth,
-		opts:             *opts,
-		selectorQueue:    new([]cssSelector),
-		reqFuncs:         new([]func(req *http.Request)),
+		gs:            gs,
+		opts:          *opts,
+		selectorQueue: new([]cssSelector),
+		reqFuncs:      new([]func(req *http.Request)),
 	}
 }
 
 func (s *Selection) Scrape(url string) error {
-	if s.curScrapingDepth >= s.opts.maxScrapingDepth {
+	if s.opts.curScrapingDepth >= s.opts.maxScrapingDepth {
 		if s.opts.enableLogging {
 			fmt.Println("[maximum scraping depth reached]")
 		}
@@ -54,10 +52,10 @@ func (s *Selection) Scrape(url string) error {
 
 			go func(css cssSelector) {
 				defer wg.Done()
-				s.scrapeSelector(doc, css, req.URL.String())
+				scrapeSelector(s, doc, css, req.URL.String())
 			}(cs)
 		} else {
-			s.scrapeSelector(doc, cs, req.URL.String())
+			scrapeSelector(s, doc, cs, req.URL.String())
 		}
 	}
 
@@ -65,50 +63,13 @@ func (s *Selection) Scrape(url string) error {
 	return nil
 }
 
-func (s *Selection) scrapeSelector(doc *goquery.Document, cs cssSelector, url string) {
-	sel := doc.Find(cs.selector)
-
-	if s.opts.enableConcurrency {
-		deltas := sel.Length()
-
-		var wg sync.WaitGroup
-		var mu sync.Mutex
-
-		wg.Add(deltas)
-
-		sel.Each(func(i int, gs *goquery.Selection) {
-			go func(gqs *goquery.Selection) {
-				defer wg.Done()
-
-				if s.opts.enableLogging {
-					s.log(url, cs.selector, int(s.curScrapingDepth))
-				}
-
-				mu.Lock()
-				cs.selectorFunc(*newSelection(&s.opts, s.curScrapingDepth+1, gqs))
-				mu.Unlock()
-			}(gs)
-		})
-
-		wg.Wait()
-	} else {
-		sel.Each(func(i int, gs *goquery.Selection) {
-			if s.opts.enableLogging {
-				s.log(url, cs.selector, int(s.curScrapingDepth))
-			}
-
-			cs.selectorFunc(*newSelection(&s.opts, s.curScrapingDepth+1, gs))
-		})
-	}
-}
-
 func (s *Selection) ChildrenSelector(selector string, selectorFunc func(s Selection)) {
 	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
 		if s.opts.enableLogging {
-			s.log("", selector, int(s.curScrapingDepth)-1)
+			log(s, "", selector)
 		}
 
-		selectorFunc(*newSelection(&s.opts, s.curScrapingDepth, gs))
+		selectorFunc(*newSelection(&s.opts, gs))
 	})
 }
 
@@ -128,24 +89,14 @@ func (s *Selection) getReqFuncs() *[]func(req *http.Request) {
 	return s.reqFuncs
 }
 
+func (s *Selection) getOptions() *options {
+	return &s.opts
+}
+
 func (s *Selection) Text() string {
 	return strings.TrimSpace(s.gs.Text())
 }
 
 func (s *Selection) Attr(attr string) (val string, exist bool) {
 	return s.gs.Attr(attr)
-}
-
-func (s *Selection) log(url, selector string, indent int) {
-	var ind string
-	for i := 0; i < indent; i++ {
-		ind += "\t"
-	}
-
-	if url == "" {
-		fmt.Printf("%s- child selector: %s\n", ind, selector)
-		return
-	}
-
-	fmt.Printf("%surl: %s, selector: %s\n", ind, url, selector)
 }

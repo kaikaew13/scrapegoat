@@ -4,12 +4,14 @@ const defaultMaxScrapingDepth uint = 3
 
 var defaultOptions = options{
 	maxScrapingDepth:  defaultMaxScrapingDepth,
+	curScrapingDepth:  0,
 	enableConcurrency: false,
 	enableLogging:     false,
 }
 
 type options struct {
 	maxScrapingDepth  uint
+	curScrapingDepth  uint
 	enableConcurrency bool
 	enableLogging     bool
 }

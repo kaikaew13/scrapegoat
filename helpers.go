@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -28,6 +29,7 @@ type Scraper interface {
 	Scrape(url string) error
 	getSelectorQueue() *[]cssSelector
 	getReqFuncs() *[]func(req *http.Request)
+	getOptions() *options
 }
 
 type cssSelector struct {
@@ -78,7 +80,64 @@ func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
 	return goquery.NewDocumentFromReader(res.Body)
 }
 
+func scrapeSelector(scraper Scraper, doc *goquery.Document, cs cssSelector, url string) {
+	sel := doc.Find(cs.selector)
+
+	opts := scraper.getOptions()
+	newOpts := *opts
+	newOpts.curScrapingDepth++
+
+	if opts.enableConcurrency {
+		deltas := sel.Length()
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+
+		wg.Add(deltas)
+
+		sel.Each(func(i int, gs *goquery.Selection) {
+			go func(gqs *goquery.Selection) {
+				defer wg.Done()
+
+				if opts.enableLogging {
+					log(scraper, url, cs.selector)
+				}
+
+				mu.Lock()
+				cs.selectorFunc(*newSelection(&newOpts, gqs))
+				mu.Unlock()
+			}(gs)
+		})
+
+		wg.Wait()
+	} else {
+		sel.Each(func(i int, gs *goquery.Selection) {
+			if opts.enableLogging {
+				log(scraper, url, cs.selector)
+			}
+
+			cs.selectorFunc(*newSelection(&newOpts, gs))
+		})
+	}
+}
+
 func getRandomUserAgent() string {
 	rand.Seed(time.Now().Unix())
 	return userAgents[rand.Int()%len(userAgents)]
+}
+
+func log(scraper Scraper, url, selector string) {
+	opts := scraper.getOptions()
+
+	var indent string
+	for i := 0; i < int(opts.curScrapingDepth); i++ {
+		indent += "\t"
+	}
+
+	if url == "" {
+		fmt.Printf("%s- child selector: %s\n", indent[:len(indent)-1], selector)
+		return
+	}
+
+	fmt.Printf("%surl: %s, selector: %s\n", indent, url, selector)
 }

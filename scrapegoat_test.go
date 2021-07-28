@@ -30,7 +30,6 @@ func TestSetSelector(t *testing.T) {
 	goat := NewGoat(
 		EnableLogging(true),
 	)
-	// goat.EnableLogging = true
 
 	data := []string{}
 
@@ -65,7 +64,6 @@ func TestSetChildrenSelector(t *testing.T) {
 	goat := NewGoat(
 		EnableLogging(true),
 	)
-	// goat.EnableLogging = true
 
 	data := []string{}
 
@@ -121,8 +119,6 @@ func TestNestedSetSelector(t *testing.T) {
 				EnableLogging(true),
 				MaxScrapingDepth(tt.msd),
 			)
-			// goat.EnableLogging = true
-			// goat.MaxScrapingDepth = tt.mrd
 
 			data := []string{}
 
