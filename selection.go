@@ -64,10 +64,10 @@ func (s *Selection) Scrape(url string) error {
 	return nil
 }
 
-func (s *Selection) ChildrenSelector(selector string, selectorFunc func(s Selection)) {
+func (s *Selection) ChildrenSelector(selector string, selectorFunc func(child Selection)) {
 	g := s.goat
 
-	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
+	s.gs.Find(selector).Each(func(i int, gs *goquery.Selection) {
 		if g.opts.enableLogging {
 			log(s, "", selector)
 		}
@@ -81,7 +81,7 @@ func (s *Selection) SetRequest(selectorFunc func(req *http.Request)) {
 	*g.reqFuncs = append(*g.reqFuncs, selectorFunc)
 }
 
-func (s *Selection) SetSelector(selector string, selectorFunc func(s Selection)) {
+func (s *Selection) SetSelector(selector string, selectorFunc func(ss Selection)) {
 	setSelectorHelper(s, selector, selectorFunc)
 }
 

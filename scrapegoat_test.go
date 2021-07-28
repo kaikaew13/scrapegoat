@@ -68,8 +68,8 @@ func TestSetChildrenSelector(t *testing.T) {
 	data := []string{}
 
 	goat.SetSelector(".markdown-body", func(s Selection) {
-		s.ChildrenSelector("h2", func(ss Selection) {
-			data = append(data, ss.Text())
+		s.ChildrenSelector("h2", func(child Selection) {
+			data = append(data, child.Text())
 		})
 	})
 
