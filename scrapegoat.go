@@ -13,17 +13,17 @@ type Goat struct {
 }
 
 func NewGoat(opts ...optionFunc) *Goat {
-	goat := &Goat{
+	g := &Goat{
+		opts:          defaultOptions,
 		selectorQueue: new([]cssSelector),
 		reqFuncs:      new([]func(req *http.Request)),
-		opts:          defaultOptions,
 	}
 
 	for _, opt := range opts {
-		opt(&goat.opts)
+		opt(&g.opts)
 	}
 
-	return goat
+	return g
 }
 
 func (g *Goat) Scrape(url string) error {

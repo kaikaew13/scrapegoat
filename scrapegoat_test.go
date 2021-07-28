@@ -95,11 +95,13 @@ func TestNestedSetSelector(t *testing.T) {
 	tests := []struct {
 		desc string
 		msd  uint
+		ec   bool
 		want []string
 	}{
 		{
-			desc: "set MaxRecursionDepth to 2 - should be able to fetch data",
+			desc: "set MaxScrapingDepth to 2 - should be able to fetch data",
 			msd:  2,
+			ec:   false,
 			want: []string{
 				"Handle Non-UTF8 html Pages",
 				"Handle Javascript-based Pages",
@@ -107,39 +109,67 @@ func TestNestedSetSelector(t *testing.T) {
 			},
 		},
 		{
-			desc: "set MaxRecursionDepth to 1 - should not be able to fetch data",
+			desc: "set MaxScrapingDepth to 1 - should not be able to fetch data",
 			msd:  1,
+			ec:   false,
 			want: []string{},
+		},
+		{
+			desc: "concurrent with nested scraping - should be able to fetch data",
+			msd:  2,
+			ec:   true,
+			want: []string{
+				"Handle Non-UTF8 html Pages",
+				"Handle Javascript-based Pages",
+				"For Loop",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			goat := NewGoat(
-				EnableLogging(true),
-				MaxScrapingDepth(tt.msd),
-			)
+			it := 1
+			if tt.ec {
+				it = 10
+			}
 
-			data := []string{}
+			for i := 0; i < it; i++ {
+				goat := NewGoat(
+					EnableConcurrency(tt.ec),
+					EnableLogging(true),
+					MaxScrapingDepth(tt.msd),
+				)
 
-			goat.SetSelector(".markdown-body p:nth-child(27) a", func(s Selection) {
-				val, _ := s.Attr("href")
-				s.SetSelector(".markdown-body h2", func(ss Selection) {
-					data = append(data, ss.Text())
+				dataMap := map[string]bool{}
+				dataSlice := []string{}
+
+				goat.SetSelector(".markdown-body p:nth-child(27) a", func(s Selection) {
+					val, _ := s.Attr("href")
+					s.SetSelector(".markdown-body h2", func(ss Selection) {
+						if tt.ec {
+							dataMap[ss.Text()] = true
+						} else {
+
+							dataSlice = append(dataSlice, ss.Text())
+						}
+					})
+
+					if err := s.Scrape(val); err != nil {
+						t.Fatal(err)
+					}
+
 				})
 
-				if err := s.Scrape(val); err != nil {
+				if err := goat.Scrape(testingURL); err != nil {
 					t.Fatal(err)
 				}
 
-			})
-
-			if err := goat.Scrape(testingURL); err != nil {
-				t.Fatal(err)
+				if tt.ec {
+					compareMapHelper(t, tt.want, dataMap)
+				} else {
+					compareSliceHelper(t, tt.want, dataSlice)
+				}
 			}
-
-			compareSliceHelper(t, tt.want, data)
-
 		})
 	}
 }
@@ -177,14 +207,18 @@ func TestEnableConcurrency(t *testing.T) {
 			"goquery - a little like that j-thing, only in Go",
 		}
 
-		if len(data) != len(want) {
-			t.Errorf("want map of data with length of %d, got %d", len(want), len(data))
-		}
+		compareMapHelper(t, want, data)
+	}
+}
 
-		for _, w := range want {
-			if !data[w] {
-				t.Errorf("want data map to have %s as true, got %t", w, data[w])
-			}
+func compareMapHelper(t testing.TB, want []string, got map[string]bool) {
+	if len(got) != len(want) {
+		t.Errorf("want map of data with length of %d, got %d", len(want), len(got))
+	}
+
+	for _, w := range want {
+		if !got[w] {
+			t.Errorf("want data map to have %s as true, got %t", w, got[w])
 		}
 	}
 }

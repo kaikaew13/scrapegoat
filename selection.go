@@ -10,24 +10,25 @@ import (
 )
 
 type Selection struct {
-	gs *goquery.Selection
-	Goat
+	gs   *goquery.Selection
+	goat *Goat
 }
 
 func newSelection(opts *options, gs *goquery.Selection) *Selection {
+	g := NewGoat()
+	g.opts = *opts
+
 	return &Selection{
-		gs: gs,
-		Goat: Goat{
-			opts:          *opts,
-			selectorQueue: new([]cssSelector),
-			reqFuncs:      new([]func(req *http.Request)),
-		},
+		gs:   gs,
+		goat: g,
 	}
 }
 
 func (s *Selection) Scrape(url string) error {
-	if s.opts.curScrapingDepth >= s.opts.maxScrapingDepth {
-		if s.opts.enableLogging {
+	g := s.goat
+
+	if g.opts.curScrapingDepth >= g.opts.maxScrapingDepth {
+		if g.opts.enableLogging {
 			fmt.Println("[maximum scraping depth reached]")
 		}
 
@@ -46,8 +47,8 @@ func (s *Selection) Scrape(url string) error {
 
 	var wg sync.WaitGroup
 
-	for _, cs := range *s.selectorQueue {
-		if s.opts.enableConcurrency {
+	for _, cs := range *g.selectorQueue {
+		if g.opts.enableConcurrency {
 			wg.Add(1)
 
 			go func(css cssSelector) {
@@ -64,17 +65,20 @@ func (s *Selection) Scrape(url string) error {
 }
 
 func (s *Selection) ChildrenSelector(selector string, selectorFunc func(s Selection)) {
+	g := s.goat
+
 	s.gs.ChildrenFiltered(selector).Each(func(i int, gs *goquery.Selection) {
-		if s.opts.enableLogging {
+		if g.opts.enableLogging {
 			log(s, "", selector)
 		}
 
-		selectorFunc(*newSelection(&s.opts, gs))
+		selectorFunc(*newSelection(&g.opts, gs))
 	})
 }
 
 func (s *Selection) SetRequest(selectorFunc func(req *http.Request)) {
-	*s.reqFuncs = append(*s.reqFuncs, selectorFunc)
+	g := s.goat
+	*g.reqFuncs = append(*g.reqFuncs, selectorFunc)
 }
 
 func (s *Selection) SetSelector(selector string, selectorFunc func(s Selection)) {
@@ -82,7 +86,7 @@ func (s *Selection) SetSelector(selector string, selectorFunc func(s Selection))
 }
 
 func (s *Selection) getGoat() *Goat {
-	return &s.Goat
+	return s.goat
 }
 
 func (s *Selection) Text() string {

@@ -36,8 +36,8 @@ type cssSelector struct {
 }
 
 func setSelectorHelper(scraper Scraper, selector string, selectorFunc func(s Selection)) {
-	goat := scraper.getGoat()
-	sq := goat.selectorQueue
+	g := scraper.getGoat()
+	sq := g.selectorQueue
 
 	*sq = append(*sq, cssSelector{
 		selector:     selector,
@@ -53,8 +53,8 @@ func newRequest(scraper Scraper, url string) (*http.Request, error) {
 
 	req.Header.Add("User-Agent", getRandomUserAgent())
 
-	goat := scraper.getGoat()
-	reqFuncs := goat.reqFuncs
+	g := scraper.getGoat()
+	reqFuncs := g.reqFuncs
 	if reqFuncs != nil {
 		for _, fn := range *reqFuncs {
 			fn(req)
@@ -83,8 +83,8 @@ func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
 func scrapeSelector(scraper Scraper, doc *goquery.Document, cs cssSelector, url string) {
 	sel := doc.Find(cs.selector)
 
-	goat := scraper.getGoat()
-	opts := goat.opts
+	g := scraper.getGoat()
+	opts := g.opts
 	newOpts := opts
 	newOpts.curScrapingDepth++
 
@@ -128,8 +128,8 @@ func getRandomUserAgent() string {
 }
 
 func log(scraper Scraper, url, selector string) {
-	goat := scraper.getGoat()
-	opts := goat.opts
+	g := scraper.getGoat()
+	opts := g.opts
 
 	var indent string
 	for i := 0; i < int(opts.curScrapingDepth); i++ {
