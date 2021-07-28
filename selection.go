@@ -10,18 +10,18 @@ import (
 )
 
 type Selection struct {
-	gs            *goquery.Selection
-	opts          options
-	selectorQueue *[]cssSelector
-	reqFuncs      *[]func(req *http.Request)
+	gs *goquery.Selection
+	Goat
 }
 
 func newSelection(opts *options, gs *goquery.Selection) *Selection {
 	return &Selection{
-		gs:            gs,
-		opts:          *opts,
-		selectorQueue: new([]cssSelector),
-		reqFuncs:      new([]func(req *http.Request)),
+		gs: gs,
+		Goat: Goat{
+			opts:          *opts,
+			selectorQueue: new([]cssSelector),
+			reqFuncs:      new([]func(req *http.Request)),
+		},
 	}
 }
 
@@ -81,16 +81,8 @@ func (s *Selection) SetSelector(selector string, selectorFunc func(s Selection))
 	setSelectorHelper(s, selector, selectorFunc)
 }
 
-func (s *Selection) getSelectorQueue() *[]cssSelector {
-	return s.selectorQueue
-}
-
-func (s *Selection) getReqFuncs() *[]func(req *http.Request) {
-	return s.reqFuncs
-}
-
-func (s *Selection) getOptions() *options {
-	return &s.opts
+func (s *Selection) getGoat() *Goat {
+	return &s.Goat
 }
 
 func (s *Selection) Text() string {

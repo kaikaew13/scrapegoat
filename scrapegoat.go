@@ -72,14 +72,6 @@ func (g *Goat) SetSelector(selector string, selectorFunc func(s Selection)) {
 	setSelectorHelper(g, selector, selectorFunc)
 }
 
-func (g *Goat) getSelectorQueue() *[]cssSelector {
-	return g.selectorQueue
-}
-
-func (g *Goat) getReqFuncs() *[]func(req *http.Request) {
-	return g.reqFuncs
-}
-
-func (g *Goat) getOptions() *options {
-	return &g.opts
+func (g *Goat) getGoat() *Goat {
+	return g
 }

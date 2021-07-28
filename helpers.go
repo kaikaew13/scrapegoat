@@ -27,9 +27,7 @@ var (
 
 type Scraper interface {
 	Scrape(url string) error
-	getSelectorQueue() *[]cssSelector
-	getReqFuncs() *[]func(req *http.Request)
-	getOptions() *options
+	getGoat() *Goat
 }
 
 type cssSelector struct {
@@ -38,7 +36,8 @@ type cssSelector struct {
 }
 
 func setSelectorHelper(scraper Scraper, selector string, selectorFunc func(s Selection)) {
-	sq := scraper.getSelectorQueue()
+	goat := scraper.getGoat()
+	sq := goat.selectorQueue
 
 	*sq = append(*sq, cssSelector{
 		selector:     selector,
@@ -54,7 +53,8 @@ func newRequest(scraper Scraper, url string) (*http.Request, error) {
 
 	req.Header.Add("User-Agent", getRandomUserAgent())
 
-	reqFuncs := scraper.getReqFuncs()
+	goat := scraper.getGoat()
+	reqFuncs := goat.reqFuncs
 	if reqFuncs != nil {
 		for _, fn := range *reqFuncs {
 			fn(req)
@@ -83,8 +83,9 @@ func getDocumentFromRequest(req *http.Request) (*goquery.Document, error) {
 func scrapeSelector(scraper Scraper, doc *goquery.Document, cs cssSelector, url string) {
 	sel := doc.Find(cs.selector)
 
-	opts := scraper.getOptions()
-	newOpts := *opts
+	goat := scraper.getGoat()
+	opts := goat.opts
+	newOpts := opts
 	newOpts.curScrapingDepth++
 
 	if opts.enableConcurrency {
@@ -127,7 +128,8 @@ func getRandomUserAgent() string {
 }
 
 func log(scraper Scraper, url, selector string) {
-	opts := scraper.getOptions()
+	goat := scraper.getGoat()
+	opts := goat.opts
 
 	var indent string
 	for i := 0; i < int(opts.curScrapingDepth); i++ {
