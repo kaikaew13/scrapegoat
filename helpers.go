@@ -92,7 +92,7 @@ func scrapeSelector(scraper Scraper, doc *goquery.Document, cs cssSelector, url 
 		deltas := sel.Length()
 
 		var wg sync.WaitGroup
-		var mu sync.Mutex
+		var rwm sync.RWMutex
 
 		wg.Add(deltas)
 
@@ -104,9 +104,9 @@ func scrapeSelector(scraper Scraper, doc *goquery.Document, cs cssSelector, url 
 					log(scraper, url, cs.selector)
 				}
 
-				mu.Lock()
+				rwm.Lock()
 				cs.selectorFunc(*newSelection(&newOpts, gqs))
-				mu.Unlock()
+				rwm.Unlock()
 			}(gs)
 		})
 

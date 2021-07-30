@@ -133,12 +133,12 @@ func TestNestedSetSelector(t *testing.T) {
 				it = 10
 			}
 
+			goat := NewGoat(
+				EnableConcurrency(tt.ec),
+				EnableLogging(true),
+				MaxScrapingDepth(tt.msd),
+			)
 			for i := 0; i < it; i++ {
-				goat := NewGoat(
-					EnableConcurrency(tt.ec),
-					EnableLogging(true),
-					MaxScrapingDepth(tt.msd),
-				)
 
 				dataMap := map[string]bool{}
 				dataSlice := []string{}
